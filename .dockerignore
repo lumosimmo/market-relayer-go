@@ -1,0 +1,8 @@
+.git
+.github
+tmp
+coverage
+dist
+*.cover
+*.out
+.DS_Store

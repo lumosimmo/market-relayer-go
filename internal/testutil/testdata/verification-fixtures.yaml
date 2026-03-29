@@ -1,0 +1,84 @@
+name: verification-fixtures
+
+metadata:
+  config_digest: fixture-config-digest-verification
+  pricing_algorithm_version: 1
+  schema_version: 2
+  envelope_version: 1
+
+market:
+  symbol: ETHUSD
+  session_mode: always_open
+  publish_interval: 3s
+  staleness_threshold: 10s
+  max_fallback_age: 30s
+  clamp_bps: 50
+  divergence_threshold_bps: 250
+  publish_scale: 2
+
+source_order:
+  - coinbase
+  - kraken
+
+scenarios:
+  - name: happy-path-open
+    record_id: fixture-cycle-001
+    at: 2026-03-27T12:00:00Z
+    quotes:
+      - source: coinbase
+        mid: "1981.75"
+        basis_kind: source_timestamp
+        basis_at: 2026-03-27T11:59:59.500Z
+      - source: kraken
+        mid: "1981.65"
+        basis_kind: received_at
+        basis_at: 2026-03-27T12:00:00Z
+    sink_outcomes:
+      - kind: ack
+        acked_at: 2026-03-27T12:00:00.100Z
+
+  - name: fallback-transition
+    record_id: fixture-cycle-002
+    at: 2026-03-27T12:00:12Z
+    quotes: []
+    sink_outcomes:
+      - kind: ack
+        acked_at: 2026-03-27T12:00:12.100Z
+
+  - name: pending-recovery
+    record_id: fixture-cycle-003
+    at: 2026-03-27T12:00:15Z
+    quotes:
+      - source: coinbase
+        mid: "1982.20"
+        basis_kind: source_timestamp
+        basis_at: 2026-03-27T12:00:15Z
+    sink_outcomes:
+      - kind: ack
+        acked_at: 2026-03-27T12:00:15.100Z
+
+  - name: sent-boundary-recovery
+    record_id: fixture-cycle-004
+    at: 2026-03-27T12:00:18Z
+    quotes:
+      - source: coinbase
+        mid: "1982.35"
+        basis_kind: source_timestamp
+        basis_at: 2026-03-27T12:00:18Z
+    sink_outcomes:
+      - kind: ack
+        duplicate: true
+        acked_at: 2026-03-27T12:00:18.100Z
+
+  - name: retry-path
+    record_id: fixture-cycle-005
+    at: 2026-03-27T12:00:21Z
+    quotes:
+      - source: coinbase
+        mid: "1982.40"
+        basis_kind: source_timestamp
+        basis_at: 2026-03-27T12:00:21Z
+    sink_outcomes:
+      - kind: retryable_timeout
+      - kind: ack
+        acked_at: 2026-03-27T12:00:21.200Z

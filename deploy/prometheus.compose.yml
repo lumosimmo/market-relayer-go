@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: market-relayer-go
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - market-relayer-a:8080
+          - market-relayer-b:8080

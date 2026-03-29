@@ -1,0 +1,25 @@
+# Binaries
+bin/
+dist/
+
+# Go
+*.test
+coverage.out
+
+# Dependencies
+vendor/
+
+# Env
+.env
+.env.local
+
+# Editors
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Temporary files
+tmp

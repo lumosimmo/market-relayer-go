@@ -1,0 +1,59 @@
+x-market-relayer-common: &market-relayer-common
+  image: ${MARKET_RELAYER_IMAGE:-market-relayer-go:latest}
+  restart: unless-stopped
+  environment: &market-relayer-env
+    MARKET_RELAYER_API_LISTEN_ADDR: 0.0.0.0:8080
+    MARKET_RELAYER_STORE_DSN: ${MARKET_RELAYER_STORE_DSN:-postgres://postgres:postgres@db.example.com:5432/market_relayer?sslmode=require}
+    MARKET_RELAYER_STORE_MAX_OPEN_CONNS: ${MARKET_RELAYER_STORE_MAX_OPEN_CONNS:-8}
+    MARKET_RELAYER_STORE_MAX_IDLE_CONNS: ${MARKET_RELAYER_STORE_MAX_IDLE_CONNS:-8}
+    MARKET_RELAYER_STORE_CONN_MAX_LIFETIME: ${MARKET_RELAYER_STORE_CONN_MAX_LIFETIME:-30m}
+    MARKET_RELAYER_STORE_CONNECT_TIMEOUT: ${MARKET_RELAYER_STORE_CONNECT_TIMEOUT:-5s}
+    MARKET_RELAYER_STORE_LOCK_TIMEOUT: ${MARKET_RELAYER_STORE_LOCK_TIMEOUT:-5s}
+    MARKET_RELAYER_STORE_LEASE_TTL: ${MARKET_RELAYER_STORE_LEASE_TTL:-15s}
+    MARKET_RELAYER_STORE_LEASE_RENEW_INTERVAL: ${MARKET_RELAYER_STORE_LEASE_RENEW_INTERVAL:-5s}
+    MARKET_RELAYER_SINK_URL: ${MARKET_RELAYER_SINK_URL:-https://publisher.example.com/publish}
+    MARKET_RELAYER_SINK_BEARER_TOKEN: ${MARKET_RELAYER_SINK_BEARER_TOKEN:-}
+  volumes:
+    - ./configs/markets.compose.yaml.tpl:/etc/market-relayer/config.template.yaml:ro
+  command: &market-relayer-command
+    - /bin/sh
+    - -lc
+    - envsubst < /etc/market-relayer/config.template.yaml > /tmp/market-relayer.yaml && exec /usr/local/bin/market-relayer -config /tmp/market-relayer.yaml
+  healthcheck: &market-relayer-healthcheck
+    test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/healthz >/dev/null"]
+    interval: 10s
+    timeout: 3s
+    retries: 6
+
+services:
+  market-relayer-a:
+    <<: *market-relayer-common
+    environment:
+      <<: *market-relayer-env
+      MARKET_RELAYER_INSTANCE_ID: market-relayer-a
+    ports:
+      - "8081:8080"
+
+  market-relayer-b:
+    <<: *market-relayer-common
+    environment:
+      <<: *market-relayer-env
+      MARKET_RELAYER_INSTANCE_ID: market-relayer-b
+    ports:
+      - "8082:8080"
+
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v3.2.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./deploy/prometheus.compose.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    profiles: ["observability"]
+    image: grafana/grafana:11.6.0
+    ports:
+      - "3000:3000"
